@@ -1,0 +1,44 @@
+{
+    "model_name": "Random Forest Classifier (End-to-End Production Pipeline)",
+    "model_version": "1.0.0",
+    "training_date": "2026-09-25 18:04:15",
+    "target_name": "Churn",
+    "optimal_threshold": 0.45,
+    "raw_input_features": [
+        "Tenure",
+        "WarehouseToHome",
+        "NumberOfDeviceRegistered",
+        "PreferedOrderCat",
+        "SatisfactionScore",
+        "MaritalStatus",
+        "NumberOfAddress",
+        "Complain",
+        "DaySinceLastOrder",
+        "CashbackAmount"
+    ],
+    "raw_numerical_features": [
+        "Tenure",
+        "WarehouseToHome",
+        "NumberOfDeviceRegistered",
+        "SatisfactionScore",
+        "NumberOfAddress",
+        "Complain",
+        "DaySinceLastOrder",
+        "CashbackAmount"
+    ],
+    "raw_categorical_features": [
+        "PreferedOrderCat",
+        "MaritalStatus"
+    ],
+    "engineered_features": [
+        "CashbackPerTenure",
+        "InactivityRatio",
+        "HighRiskComplain",
+        "TenureStage"
+    ],
+    "pipeline_steps": [
+        "feature_engineer",
+        "preprocessor",
+        "classifier"
+    ]
+}
