@@ -8,9 +8,9 @@ import numpy as np
 import streamlit as st
 from sklearn.base import BaseEstimator, TransformerMixin
 
-# 1. Define custom feature engineering transformer class
+# 1. Custom Feature Engineer Transformer (Must match exact class structure used during model fitting)
 class EcommerceFeatureEngineer(BaseEstimator, TransformerMixin):
-    """Custom transformer class executing domain-specific feature engineering."""
+    """Encapsulates domain feature engineering for the E-Commerce churn pipeline."""
     def __init__(self):
         pass
 
@@ -20,24 +20,24 @@ class EcommerceFeatureEngineer(BaseEstimator, TransformerMixin):
     def transform(self, X):
         X_out = X.copy()
         
-        # 1. CashbackPerTenure
+        # Feature 1: CashbackPerTenure
         if 'CashbackAmount' in X_out.columns and 'Tenure' in X_out.columns:
             tenure_safe = X_out['Tenure'].fillna(0)
             X_out['CashbackPerTenure'] = X_out['CashbackAmount'] / (tenure_safe + 1.0)
             
-        # 2. InactivityRatio
+        # Feature 2: InactivityRatio
         if 'DaySinceLastOrder' in X_out.columns and 'Tenure' in X_out.columns:
             tenure_safe = X_out['Tenure'].fillna(0)
             days_safe = X_out['DaySinceLastOrder'].fillna(0)
             X_out['InactivityRatio'] = days_safe / (tenure_safe * 30.0 + 1.0)
             
-        # 3. HighRiskComplain
+        # Feature 3: HighRiskComplain
         if 'Complain' in X_out.columns and 'SatisfactionScore' in X_out.columns:
             complain_flag = X_out['Complain'].fillna(0)
             satisfaction_val = X_out['SatisfactionScore'].fillna(3)
             X_out['HighRiskComplain'] = ((complain_flag == 1) & (satisfaction_val <= 2)).astype(int)
             
-        # 4. TenureStage
+        # Feature 4: TenureStage
         if 'Tenure' in X_out.columns:
             def bin_tenure(val):
                 if pd.isna(val) or val <= 3:
@@ -52,7 +52,7 @@ class EcommerceFeatureEngineer(BaseEstimator, TransformerMixin):
             
         return X_out
 
-# 2. UNPICKLING ALIAS FIX: Inject EcommerceFeatureEngineer into the `main` module namespace
+# 2. Namespace Alias Injection: Fix joblib deserialization when model was saved from __main__
 if 'main' not in sys.modules:
     sys.modules['main'] = types.ModuleType('main')
 
@@ -61,7 +61,7 @@ sys.modules['main'].EcommerceFeatureEngineer = EcommerceFeatureEngineer
 if '__main__' in sys.modules:
     sys.modules['__main__'].EcommerceFeatureEngineer = EcommerceFeatureEngineer
 
-
+# Strict Required Schema for Raw E-Commerce Customer Inputs
 REQUIRED_FEATURES = [
     'Tenure', 'WarehouseToHome', 'NumberOfDeviceRegistered',
     'PreferedOrderCat', 'SatisfactionScore', 'MaritalStatus',
@@ -72,10 +72,10 @@ ROOT_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__fil
 
 @st.cache_resource
 def load_assets():
-    """Loads and caches production models, thresholds, metadata, and datasets."""
+    """Loads and caches production model pipelines, thresholds, metadata, and evaluation data."""
     errors = []
     
-    # Model Pipeline
+    # 1. Model Pipeline Loading
     model_path = os.path.join(ROOT_DIR, 'models', 'churn_model.joblib')
     if not os.path.exists(model_path):
         errors.append(f"Model file (`{model_path}`) is missing.")
@@ -87,7 +87,7 @@ def load_assets():
             errors.append(f"Model file (`{model_path}`) could not be loaded: {str(e)}")
             model_pipeline = None
 
-    # Decision Threshold
+    # 2. Optimal Threshold Loading
     threshold_path = os.path.join(ROOT_DIR, 'models', 'churn_threshold.joblib')
     threshold = 0.45
     if os.path.exists(threshold_path):
@@ -97,7 +97,7 @@ def load_assets():
         except Exception:
             threshold = 0.45
 
-    # Metadata
+    # 3. Pipeline Metadata
     metadata_path = os.path.join(ROOT_DIR, 'models', 'pipeline_metadata.json')
     metadata = {"model_name": "Random Forest Pipeline", "model_version": "1.0.0", "training_date": "N/A"}
     if os.path.exists(metadata_path):
@@ -107,7 +107,7 @@ def load_assets():
         except Exception:
             pass
 
-    # Raw Dataset
+    # 4. Raw Dataset Loading
     dataset_path = os.path.join(ROOT_DIR, 'data', 'data_ecommerce_customer_churn.csv')
     if not os.path.exists(dataset_path):
         dataset_path = os.path.join(ROOT_DIR, 'data_ecommerce_customer_churn.csv')
@@ -121,7 +121,7 @@ def load_assets():
         except Exception:
             df_raw = None
 
-    # Model Comparison DataFrame
+    # 5. Model Comparison Data
     comp_path = os.path.join(ROOT_DIR, 'models', 'tuned_model_comparison.csv')
     if not os.path.exists(comp_path):
         comp_path = os.path.join(ROOT_DIR, 'models', 'model_comparison.csv')
@@ -133,7 +133,7 @@ def load_assets():
         except Exception:
             df_comp = None
 
-    # Test Arrays
+    # 6. Test Arrays / Dynamic Fallback
     test_path = os.path.join(ROOT_DIR, 'data', 'ecom_processed_data.npz')
     X_test, y_test = None, None
     if os.path.exists(test_path):
@@ -143,7 +143,6 @@ def load_assets():
         except Exception:
             pass
 
-    # Fallback: create X_test and y_test dynamically from df_raw if test file is absent
     if (X_test is None or y_test is None) and df_raw is not None and 'Churn' in df_raw.columns:
         try:
             X_test = df_raw[REQUIRED_FEATURES].copy()

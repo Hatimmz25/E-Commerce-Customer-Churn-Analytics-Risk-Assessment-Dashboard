@@ -33,17 +33,24 @@ def render_single_prediction(model_pipeline, threshold, metadata):
         submit_button = st.form_submit_button(label="Evaluate Customer Risk Profile", use_container_width=True)
 
     if submit_button:
-        # Standardize categorical input value
-        cat_value = 'Mobile Phone' if preferred_cat == 'Mobile' else preferred_cat
+        # Standardize category inputs matching training mapping
+        cat_value = 'Mobile Phone' if preferred_cat in ['Mobile', 'Mobile Phone'] else preferred_cat
 
+        # Construct Raw Inputs DataFrame (Matching Pipeline Schema Exactly)
         raw_input_df = pd.DataFrame([{
-            'Tenure': tenure, 'WarehouseToHome': warehouse_dist,
-            'NumberOfDeviceRegistered': num_devices, 'PreferedOrderCat': cat_value,
-            'SatisfactionScore': satisfaction_score, 'MaritalStatus': marital_status,
-            'NumberOfAddress': num_addresses, 'Complain': complain,
-            'DaySinceLastOrder': days_since_last_order, 'CashbackAmount': cashback
+            'Tenure': tenure,
+            'WarehouseToHome': warehouse_dist,
+            'NumberOfDeviceRegistered': num_devices,
+            'PreferedOrderCat': cat_value,
+            'SatisfactionScore': satisfaction_score,
+            'MaritalStatus': marital_status,
+            'NumberOfAddress': num_addresses,
+            'Complain': complain,
+            'DaySinceLastOrder': days_since_last_order,
+            'CashbackAmount': cashback
         }])
 
+        # Predict using full pipeline
         res = predict_single(model_pipeline, raw_input_df, threshold)
 
         st.markdown("---")
@@ -71,45 +78,36 @@ def render_single_prediction(model_pipeline, threshold, metadata):
             </div>
             """, unsafe_allow_html=True)
 
-        st.info("ℹ️ **Interpretation Note**: Continuous probabilities reflect historical model pattern scoring and relative risk likelihood.")
-
         st.markdown("---")
-        st.markdown('<h3 class="dashboard-header">💡 Customer Profile Insights & Explanation</h3>', unsafe_allow_html=True)
+        st.markdown('<h3 class="dashboard-header">💡 Customer Profile Insights & SHAP Drivers</h3>', unsafe_allow_html=True)
 
         obs_col, shap_col = st.columns([1, 1])
 
         with obs_col:
             st.markdown("##### Key Profile Observations")
-            tenure_msg = f"• **Account Tenure**: Customer is in early onboarding stage ({tenure} months)." if tenure <= 3 else (f"• **Account Tenure**: Customer has moderate account history ({tenure} months)." if tenure <= 12 else f"• **Account Tenure**: Customer exhibits established platform tenure ({tenure} months).")
-            recency_msg = f"• **Recency**: Customer has a relatively long inactivity period since last order ({days_since_last_order} days)." if days_since_last_order > 30 else (f"• **Recency**: Moderate inactivity period recorded ({days_since_last_order} days since order)." if days_since_last_order > 10 else f"• **Recency**: Active purchasing behavior with recent order ({days_since_last_order} days ago).")
-            complain_msg = "• **Complaint History**: Active formal complaint logged on record." if complain == 1 else "• **Complaint History**: No recent formal complaints logged."
-            satisfaction_msg = f"• **Satisfaction Level**: Self-reported rating of {satisfaction_score}/5."
-            cashback_msg = f"• **Financial Rewards**: Accumulated ${cashback:.2f} in average cashback rewards."
-            device_msg = f"• **Platform Access**: Accesses platform across {num_devices} registered device(s)."
+            tenure_msg = f"• **Account Tenure**: Customer is in onboarding stage ({tenure} months)." if tenure <= 3 else (f"• **Account Tenure**: Moderate account history ({tenure} months)." if tenure <= 12 else f"• **Account Tenure**: Established platform tenure ({tenure} months).")
+            recency_msg = f"• **Recency**: High inactivity period ({days_since_last_order} days since last order)." if days_since_last_order > 30 else f"• **Recency**: Active customer engagement ({days_since_last_order} days since last order)."
+            complain_msg = "• **Complaint History**: Active formal complaint logged on record." if complain == 1 else "• **Complaint History**: No active complaints logged."
+            satisfaction_msg = f"• **Satisfaction**: Rated {satisfaction_score}/5 stars."
 
             st.markdown(f"""
             <div class="insight-box">
-                {tenure_msg}<br><br>{recency_msg}<br><br>{complain_msg}<br><br>{satisfaction_msg}<br><br>{cashback_msg}<br><br>{device_msg}
+                {tenure_msg}<br><br>{recency_msg}<br><br>{complain_msg}<br><br>{satisfaction_msg}
             </div>
             """, unsafe_allow_html=True)
 
         top_shap_features = {}
 
         with shap_col:
-            st.markdown("##### Individual Model Prediction Drivers (SHAP Explanation)")
+            st.markdown("##### Local Feature Contribution (SHAP Explanation)")
             try:
-                # Safely inspect pipeline steps
                 steps_dict = dict(model_pipeline.steps)
                 
-                # Identify steps
                 fe_step = steps_dict.get('feature_engineer', steps_dict.get('fe'))
                 prep_step = steps_dict.get('preprocessor', steps_dict.get('prep'))
                 clf_step = steps_dict.get('classifier', steps_dict.get('model', model_pipeline[-1]))
 
-                if fe_step is not None:
-                    engineered_df = fe_step.transform(raw_input_df)
-                else:
-                    engineered_df = raw_input_df.copy()
+                engineered_df = fe_step.transform(raw_input_df) if fe_step is not None else raw_input_df.copy()
 
                 if prep_step is not None:
                     processed_input = prep_step.transform(engineered_df)
@@ -123,24 +121,21 @@ def render_single_prediction(model_pipeline, threshold, metadata):
 
                 explainer = shap.TreeExplainer(clf_step)
                 shap_vals = explainer(processed_df)
-
                 shap_val_instance = shap_vals[0, :, 1] if len(shap_vals.shape) == 3 else shap_vals[0]
 
                 top_indices = np.argsort(np.abs(shap_val_instance.values))[::-1][:5]
                 for idx in top_indices:
                     top_shap_features[clean_feature_names[idx]] = round(float(shap_val_instance.values[idx]), 4)
 
-                fig, ax = plt.subplots(figsize=(6, 4.5))
+                fig, ax = plt.subplots(figsize=(6, 4))
                 shap.plots.waterfall(shap_val_instance, max_display=7, show=False)
-                plt.title("Local Feature Contribution (SHAP Waterfall)", fontsize=10, fontweight='bold')
+                plt.title("Local Feature Contribution (SHAP)", fontsize=10, fontweight='bold')
                 plt.tight_layout()
                 st.pyplot(fig)
                 plt.close()
 
-                st.caption("🔍 **Explanation Note**: Visualizes model statistical feature contributions. Does not imply causality.")
-
             except Exception as shap_err:
-                st.warning(f"⚠️ Local SHAP waterfall explanation could not be computed: {str(shap_err)}")
+                st.warning(f"⚠️ Local SHAP waterfall explanation could not be rendered: {str(shap_err)}")
 
         st.markdown("---")
         st.markdown('<h3 class="dashboard-header">📄 Export Individual Prediction Report</h3>', unsafe_allow_html=True)
@@ -153,35 +148,24 @@ def render_single_prediction(model_pipeline, threshold, metadata):
                 "model_version": metadata.get("model_version", "1.0.0"),
                 "classification_threshold": threshold
             },
-            "customer_profile_input": {
-                "Tenure_Months": tenure, "MaritalStatus": marital_status,
-                "SavedAddresses": num_addresses, "DaysSinceLastPurchase": days_since_last_order,
-                "RegisteredDevices": num_devices, "SatisfactionScore": satisfaction_score,
-                "LoggedComplaint": "Yes" if complain == 1 else "No", "PrimaryOrderCategory": preferred_cat,
-                "AverageCashback_USD": cashback, "FulfillmentDistance_KM": warehouse_dist
-            },
+            "customer_profile_input": raw_input_df.to_dict(orient='records')[0],
             "prediction_summary": {
                 "churn_probability": round(res['probability'], 4),
                 "predicted_churn_class": int(res['predicted_class']),
-                "risk_level": res['risk_level'],
-                "decision_threshold_applied": threshold
+                "risk_level": res['risk_level']
             },
-            "top_model_feature_drivers_shap": top_shap_features
+            "top_shap_feature_drivers": top_shap_features
         }
 
-        csv_report_df = pd.DataFrame([{
-            'Tenure_Months': tenure, 'MaritalStatus': marital_status,
-            'SavedAddresses': num_addresses, 'DaysSinceLastPurchase': days_since_last_order,
-            'RegisteredDevices': num_devices, 'SatisfactionScore': satisfaction_score,
-            'LoggedComplaint': "Yes" if complain == 1 else "No", 'PrimaryOrderCategory': preferred_cat,
-            'AverageCashback_USD': cashback, 'FulfillmentDistance_KM': warehouse_dist,
-            'Churn_Probability': round(res['probability'], 4), 'Predicted_Churn_Class': int(res['predicted_class']),
-            'Risk_Level': res['risk_level'], 'Model_Threshold': threshold
-        }])
+        csv_report_df = raw_input_df.copy()
+        csv_report_df['Churn_Probability'] = round(res['probability'], 4)
+        csv_report_df['Predicted_Churn_Class'] = int(res['predicted_class'])
+        csv_report_df['Risk_Level'] = res['risk_level']
+        csv_report_df['Model_Threshold'] = threshold
 
         with report_col1:
             st.download_button(
-                label="📥 Download Report as JSON File",
+                label="📥 Download JSON Report",
                 data=json.dumps(json_report_data, indent=4),
                 file_name="customer_churn_report.json",
                 mime="application/json",
@@ -190,7 +174,7 @@ def render_single_prediction(model_pipeline, threshold, metadata):
 
         with report_col2:
             st.download_button(
-                label="📥 Download Report as CSV File",
+                label="📥 Download CSV Report",
                 data=csv_report_df.to_csv(index=False).encode('utf-8'),
                 file_name="customer_churn_report.csv",
                 mime="text/csv",
