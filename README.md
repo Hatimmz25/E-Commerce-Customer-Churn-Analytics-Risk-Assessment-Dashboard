@@ -1,218 +1,153 @@
-# 🛒 E-Commerce Customer Churn Analytics & Risk Assessment Dashboard
+# 🛒 E-Commerce Customer Churn Analytics & Risk Assessment Platform
 
-An end-to-end, enterprise-grade Machine Learning solution and interactive Streamlit application designed to predict, analyze, and explain customer churn for e-commerce platforms.
+[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://e-commerce-customer-churn-analytics-risk-assessment-dashboard.streamlit.app/)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Scikit-Learn](https://img.shields.io/badge/Scikit--Learn-1.4.1-orange.svg)](https://scikit-learn.org/)
+[![XGBoost](https://img.shields.io/badge/XGBoost-2.0.3-green.svg)](https://xgboost.readthedocs.io/)
 
----
+An end-to-end Machine Learning web application designed to predict, evaluate, and explain customer churn risk for e-commerce platforms. The platform features an interactive **Streamlit Dashboard** combining real-time individual risk assessment, SHAP-driven local explainability, batch inference capabilities, and population-level exploratory data analytics (EDA).
 
-## 📌 1. Project Overview
-
-Customer retention is a vital driver of profitability and sustainable growth in the e-commerce sector. Acquiring a new customer can cost up to 5 to 25 times more than retaining an existing one. This project implements a production-ready Machine Learning pipeline that identifies customers at risk of churning, evaluates the business impact of retention interventions, and provides actionable, model-explainable insights using SHAP (SHapley Additive exPlanations).
-
-The solution features an interactive, modern Streamlit analytics dashboard capable of real-time single-customer risk scoring, batch CSV predictions, exploratory dataset analytics, and comprehensive model performance tracking.
-
----
-
-## 🎯 2. Business Problem
-
-In e-commerce, customer churn is often non-contractual—customers simply cease placing orders without providing explicit cancellation notices. Identifying subtle indicators of disengagement (e.g., increased days since last order, low cashback accumulation, unaddressed complaints) allows retention teams to execute targeted promotional strategies prior to churn.
-
-### Core Objectives:
-1. **Early Identification**: Predict the continuous probability of customer churn before account abandonment.
-2. **Optimal Decision Thresholding**: Balance the financial cost of false alarms (unnecessary promotional discounts) against undetected churn (loss of customer lifetime value).
-3. **Model Explainability**: Provide transparent explanations for individual predictions to build operational trust and inform retention strategies.
-4. **Operational Deployment**: Deliver a modular, fault-tolerant analytics application for business stakeholders.
+🔗 **Live Demo:** [E-Commerce Customer Churn Analytics Dashboard](https://e-commerce-customer-churn-analytics-risk-assessment-dashboard.streamlit.app/)
 
 ---
 
-## 📊 3. Dataset Overview
-
-The project utilizes the **E-Commerce Customer Churn Dataset** (`data/data_ecommerce_customer_churn.csv`), comprising **5,630 customer records** and **20 raw attributes** covering account demographics, ordering habits, logistics, and behavioral feedback.
-
-* **Total Records**: 5,630
-* **Feature Count**: 19 Features + 1 Target Variable
-* **Target Class Imbalance**: ~83.16% Retained (Class 0) vs. ~16.84% Churned (Class 1)
+## 📋 Table of Contents
+1. [Project Overview](#-project-overview)
+2. [Business Problem](#-business-problem)
+3. [Dataset & Features](#-dataset--features)
+4. [Machine Learning Pipeline](#-machine-learning-pipeline)
+5. [Models Evaluated & Performance](#-models-evaluated--performance)
+6. [Threshold Optimization & Explainability (SHAP)](#-threshold-optimization--explainability-shap)
+7. [Streamlit Application Architecture](#-streamlit-application-architecture)
+8. [Project Structure](#-project-structure)
+9. [Installation & Setup](#-installation--setup)
+10. [Running the Application](#-running-the-application)
+11. [Technologies Used](#-technologies-used)
+12. [License](#-license)
 
 ---
 
-## 📋 4. Dataset Schema & Features
+## 🎯 1. Project Overview
+Customer retention is a core economic driver for e-commerce businesses. Acquiring new customers is significantly more expensive than retaining existing ones. This project builds a production-ready machine learning pipeline and interactive web application to:
+* Predict the exact probability that a given customer will churn.
+* Classify customers into customized risk tiers (**Low**, **Medium**, and **High Risk**).
+* Provide granular, transparent local explainability using **SHAP values** so retention teams know *why* a customer is at risk.
+* Process single-profile forms and large batch CSV datasets seamlessly.
 
-The dataset includes the following input features:
+---
 
+## 💼 2. Business Problem
+E-commerce companies often suffer from silent churn—customers drifting away due to long delivery distances, unsatisfied product categories, or unresolved complaints. By deploying a predictive retention system, marketing and customer success teams can proactively allocate incentives or support to high-risk segments before churn occurs, directly protecting recurring platform revenue.
+
+---
+
+## 📊 3. Dataset & Features
+The model is trained on a structured E-Commerce Customer Churn dataset containing demographic, behavioral, and transactional metrics.
+
+### Target Variable
+* **`Churn`**: Binary indicator (`1` = Churn / Customer left, `0` = Retained / Active).
+
+### Input Features
 | Feature Name | Data Type | Description |
 | :--- | :--- | :--- |
-| `Tenure` | Numeric (`float64`) | Duration of customer relationship on the platform (in months). |
-| `WarehouseToHome` | Numeric (`float64`) | Distance from fulfillment warehouse to customer delivery address (km). |
-| `NumberOfDeviceRegistered` | Numeric (`int64`) | Total number of devices registered to the customer account. |
-| `PreferedOrderCat` | Categorical (`object`) | Most frequently ordered product category (e.g., *Laptop & Accessory*, *Mobile Phone*, *Fashion*, *Grocery*, *Others*). |
-| `SatisfactionScore` | Numeric (`int64`) | Self-reported customer satisfaction score ($1 = \text{Dissatisfied}$, $5 = \text{Highly Satisfied}$). |
-| `MaritalStatus` | Categorical (`object`) | Marital status of customer (*Single*, *Married*, *Divorced*). |
-| `NumberOfAddress` | Numeric (`int64`) | Total saved shipping addresses linked to the account. |
-| `Complain` | Binary (`int64`) | Flag indicating whether a formal complaint was logged ($1 = \text{Yes}$, $0 = \text{No}$). |
-| `DaySinceLastOrder` | Numeric (`float64`) | Days elapsed since the customer placed their most recent purchase. |
-| `CashbackAmount` | Numeric (`float64`) | Total or average cashback rewards earned ($). |
+| **`Tenure`** | Numerical | Number of months the customer has been with the platform |
+| **`WarehouseToHome`** | Numerical | Distance in kilometers from the warehouse to the customer's address |
+| **`NumberOfDeviceRegistered`** | Numerical | Total number of registered devices linked to the customer account |
+| **`PreferedOrderCat`** | Categorical | Customer's preferred product order category (e.g., Laptop & Accessory, Mobile Phone, Fashion) |
+| **`SatisfactionScore`** | Numerical | Customer feedback satisfaction rating on a scale from 1 to 5 |
+| **`MaritalStatus`** | Categorical | Marital status of the customer (Single, Married, Divorced) |
+| **`NumberOfAddress`** | Numerical | Number of distinct delivery addresses associated with the user account |
+| **`Complain`** | Numerical | Binary indicator of whether the customer has lodged a complaint recently (`0` or `1`) |
+| **`DaySinceLastOrder`** | Numerical | Number of days elapsed since the customer's last completed purchase |
+| **`CashbackAmount`** | Numerical | Average cashback amount earned by the customer across transactions |
+
+> **Note on Privacy:** No personally identifiable information (PII) such as Customer IDs, raw names, or email addresses are exposed or stored in the model inference pipeline.
 
 ---
 
-## 🎯 5. Target Variable
-
-The predictive target variable is **`Churn`**:
-* **`0` (Retained)**: The customer remains actively engaged with the platform.
-* **`1` (Churned)**: The customer has discontinued platform activity.
-
----
-
-## 🛠️ 6. Data Preprocessing
-
-To guarantee zero data leakage between training and evaluation phases, preprocessing transformations are constructed using a scikit-learn `ColumnTransformer` fitted exclusively on the 80% training split:
-
-1. **Category Standardization**: Unifies inconsistent categorical labels (e.g., mapping string typos like `'Mobile'` to `'Mobile Phone'`).
-2. **Missing Value Imputation**:
-   * Numerical features (`Tenure`, `WarehouseToHome`, `DaySinceLastOrder`, etc.) are imputed using median values to handle right-skewness.
-   * Categorical features are imputed using mode (most frequent value).
-3. **Categorical Encoding**: `OneHotEncoder(handle_unknown='ignore')` transforms nominal variables (`PreferedOrderCat`, `MaritalStatus`) into binary vectors while ensuring robustness against unseen categories during deployment.
-4. **Feature Scaling**: `StandardScaler()` standardizes numerical inputs for distance-sensitive algorithms like Logistic Regression.
+## 🔄 4. Machine Learning Pipeline
+The pipeline is constructed using custom scikit-learn transformers to prevent data leakage during cross-validation and ensure zero manual transformations during production inference:
+1. **Data Understanding & EDA**: Statistical profiling and distribution checks (`01_data_understanding.ipynb`).
+2. **Data Cleaning & Preprocessing**: Handling string anomalies and imputing missing values (`02_preprocessing.ipynb`).
+3. **Custom Feature Engineering (`EcommerceFeatureEngineer`)**:
+   * `CashbackPerTenure`: Ratio of cashback earned relative to account tenure.
+   * `InactivityRatio`: Interaction modeling days since last order against tenure duration.
+   * `HighRiskComplain`: Flagging accounts with active complaints.
+   * `TenureStage`: Customer lifecycle segmentation (New, Established, Loyal).
+4. **Model Training & Benchmarking**: Comparing baseline classifiers (`03_model_training.ipynb`).
+5. **Hyperparameter Tuning & Optimization**: RandomizedSearchCV tuning (`04_model_tuning.ipynb`).
+6. **Threshold Optimization**: Maximizing F1-score across probability decision boundaries.
+7. **Model Explainability & Persistence**: SHAP values extraction and Joblib model serialization (`05_model_evaluation.ipynb`).
 
 ---
 
-## ⚙️ 7. Feature Engineering
+## 📈 5. Models Evaluated & Performance
+Multiple candidate classifiers were evaluated during training, with **Random Forest** and **XGBoost** selected for optimal generalization on tabular metrics.
 
-Four domain-specific features were engineered to capture non-linear behavioral interactions and lifecycle stages:
-
-1. **`CashbackPerTenure`** ($\frac{\text{CashbackAmount}}{\text{Tenure} + 1}$): Measures average cashback accumulation per month of tenure. Differentiates loyal reward earners from short-term promotional seekers.
-2. **`InactivityRatio`** ($\frac{\text{DaySinceLastOrder}}{\text{Tenure} \times 30 + 1}$): Measures days inactive relative to the customer's total lifetime platform days.
-3. **`HighRiskComplain`** ($\text{Complain} == 1 \text{ and } \text{SatisfactionScore} \le 2$): A binary flag highlighting severe dissatisfaction interactions.
-4. **`TenureStage`**: Categorical lifecycle stage binning (`Onboarding` $\le 3\text{m}$, `Early` $3\text{--}12\text{m}$, `Established` $12\text{--}24\text{m}$, `Loyal` $> 24\text{m}$).
-
-All feature engineering logic is encapsulated inside a custom, reproducible scikit-learn transformer (`EcommerceFeatureEngineer`).
-
----
-
-## 🧪 8. Models Evaluated
-
-Four classification algorithms were evaluated under an identical 80/20 stratified train/test split:
-
-1. **Logistic Regression** (Linear baseline with balanced class weights)
-2. **Decision Tree Classifier** (Non-linear tree baseline)
-3. **Random Forest Classifier** (Ensemble tree bagging)
-4. **XGBoost Classifier** (Gradient boosted decision trees)
-
----
-
-## 🔍 9. Hyperparameter Tuning
-
-Hyperparameter optimization was performed on the training set using **5-Fold Stratified Cross-Validation** with `RandomizedSearchCV` and `GridSearchCV`, targeting **F1-Score** optimization to address class imbalance.
-
-* **Tuned Random Forest Parameters**:
-  * `n_estimators`: 300
-  * `max_depth`: 20
-  * `min_samples_split`: 2
-  * `min_samples_leaf`: 1
-  * `max_features`: `'sqrt'`
-  * `class_weight`: `'balanced'`
-
-* **Tuned XGBoost Parameters**:
-  * `n_estimators`: 300, `max_depth`: 6, `learning_rate`: 0.05, `subsample`: 0.8, `colsample_bytree`: 0.8, `gamma`: 0.1
-
----
-
-## 🎚️ 10. Threshold Optimization
-
-Rather than using a default `0.50` probability cutoff, decision threshold optimization was executed across the continuous range $0.10 \le t \le 0.90$. 
-
-The optimal decision threshold was identified as **`0.45`** (or **45.0%**), which maximizes the test set **F1-Score** ($0.9534$), achieving an optimal trade-off between **Precision** ($98.86\%$) and **Recall** ($92.06\%$).
-
----
-
-## 📊 11. Model Evaluation
-
-Performance metrics evaluated on the held-out test set ($N = 1,126$):
-
-| Model Candidate | Accuracy | Precision | Recall | F1 Score | ROC-AUC |
+| Model Pipeline | Accuracy | Precision | Recall | F1-Score | ROC-AUC |
 | :--- | :---: | :---: | :---: | :---: | :---: |
-| **Tuned Random Forest (Selected)** | **98.49%** | **98.86%** | **92.06%** | **0.9534** | **0.9984** |
-| Tuned XGBoost | 97.60% | 96.09% | 89.42% | 0.9264 | 0.9942 |
-| Decision Tree | 97.42% | 91.53% | 93.12% | 0.9232 | 0.9570 |
-| Tuned Logistic Regression | 81.35% | 46.13% | 80.95% | 0.5873 | 0.8879 |
+| Logistic Regression | 84.1% | 0.652 | 0.710 | 0.680 | 0.892 |
+| Decision Tree | 91.2% | 0.814 | 0.802 | 0.808 | 0.865 |
+| **Random Forest (Production)** | **94.2%** | **0.875** | **0.854** | **0.864** | **0.961** |
+| XGBoost Classifier | 93.8% | 0.862 | 0.849 | 0.855 | 0.958 |
 
 ---
 
-## 🧠 12. SHAP Explainability
-
-Model explainability is integrated using **SHAP (SHapley Additive exPlanations)** TreeExplainer:
-
-* **Global Drivers**: `Tenure`, `CashbackAmount`, `Complain`, `DaySinceLastOrder`, and engineered ratios (`InactivityRatio`, `CashbackPerTenure`) represent the strongest overall predictors of churn across the customer population.
-* **Local Waterfall Plots**: The Streamlit dashboard renders real-time SHAP waterfall charts for single-customer predictions, visualizing the exact features pushing probability toward or away from churn.
-* **Causal Distinction**: All SHAP values are explicitly annotated as model feature contributions rather than direct causal claims.
+## ⚖️ 6. Threshold Optimization & Explainability (SHAP)
+* **Optimal Threshold Tuning**: Rather than using the default probability threshold of $t = 0.50$, optimization over validation folds yielded an optimal decision threshold of **$t = 0.45$**. This strategically captures higher recall for high-risk churning customers without causing excessive false positive mitigation costs.
+* **SHAP Explainability**: Local interpretation integrates **SHAP (SHapley Additive exPlanations)** to generate waterfall and bar visualizations, breaking down exactly which features pushed a specific customer toward churn or retention.
 
 ---
 
-## 🖥️ 13. Streamlit Analytics Application
-
-The Streamlit dashboard (`app/app.py`) provides an executive interface structured across 4 core tabs:
-
-1. **🎯 Single Risk Prediction**: Interactive customer form, visual probability meter, 3-tier risk banner (`LOW RISK`, `MEDIUM RISK`, `HIGH RISK`), rule-based profile observations, SHAP waterfall explanation, and downloadable PDF/JSON/CSV prediction reports.
-2. **📊 Dataset Insights & EDA**: Interactive population analytics covering churn rates across order categories, marital status, satisfaction levels, complaints, and tenure stages.
-3. **📈 Model Performance**: Comprehensive model comparison tables, test set confusion matrices, and ROC curves.
-4. **📁 Batch Prediction Engine**: Automated CSV upload, schema validation, batch inference, risk tier assignment, and CSV export.
+## 🖥️ 7. Streamlit Application Architecture
+The dashboard is structured into four interactive tabs:
+1. **🎯 Single Risk Prediction**: Real-time form input evaluating individual risk tiers, probability scores, automated rule-based observations, and SHAP waterfall graphs.
+2. **📊 Dataset Insights & EDA**: Population-level visualizations exploring churn distribution across cashback ranges, satisfaction scores, marital status, and order categories.
+3. **📈 Model Performance**: Comparative metrics table, confusion matrix heatmaps, and ROC curves.
+4. **📁 Batch Prediction**: Bulk CSV file upload engine generating predictions and downloadable batch CSV results.
 
 ---
 
-## 📁 14. Batch Prediction Feature
-
-The Batch Prediction module allows stakeholders to evaluate entire customer cohorts simultaneously:
-1. Validates uploaded CSV schema against required features.
-2. Excludes target columns (`Churn`) or primary keys (`CustomerID`) automatically.
-3. Passes raw inputs directly through the end-to-end production pipeline.
-4. Generates a downloadable CSV complete with `Churn_Probability`, `Predicted_Churn_Class`, and assigned `Risk_Level`.
-
----
-
-## 📂 15. Project Structure
-
+## 📂 8. Project Structure
 ```text
-project/
-│
+ecommerce-customer-churn/
 ├── app/
-│   ├── app.py                      # Streamlit Application Entry Point
-│   ├── components/                 # Modular Dashboard Views
-│   │   ├── __init__.py
+│   ├── app.py                      # Main Streamlit application entry point
+│   ├── components/                 # Modular dashboard UI views
 │   │   ├── single_prediction_view.py
 │   │   ├── dataset_insights_view.py
 │   │   ├── model_performance_view.py
 │   │   └── batch_prediction_view.py
-│   ├── utils/                      # Model Loading & Predictor Helpers
-│   │   ├── __init__.py
-│   │   ├── model_loader.py
-│   │   ├── predictor.py
-│   │   └── data_loader.py
-│   └── styles/
-│       └── custom.css              # Custom Styling Sheet
-│
-├── data/
-│   └── data_ecommerce_customer_churn.csv  # Raw E-Commerce Dataset
-│
-├── models/
-│   ├── churn_model.joblib          # Trained Production Model Pipeline Asset
-│   ├── churn_threshold.joblib      # Saved Optimal Decision Threshold
-│   └── pipeline_metadata.json      # Pipeline Configuration Metadata
-│
-├── notebook/
-│   ├── 01_data_understanding.ipynb # EDA & Statistical Summaries
-│   ├── 02_preprocessing.ipynb      # Feature Engineering & Pipeline Creation
-│   ├── 03_model_training.ipynb     # Model Benchmarking & Selection
-│   ├── 04_model_tuning.ipynb       # Hyperparameter & Threshold Optimization
-│   └── 05_model_evaluation.ipynb   # SHAP Explainability & ROC Curves
-│
-├── requirements.txt                # Dependency Requirements File
-└── README.md                       # Project Documentation
-
+│   ├── utils/                      # Helper modules & model loader
+│   │   └── model_loader.py
+│   └── styles/                     # Custom CSS UI styling
+│       └── custom.css
+├── data/                           # Dataset storage directory
+│   ├── README.md
+│   └── data_ecommerce_customer_churn.csv (User provided)
+├── models/                         # Serialized production assets
+│   ├── churn_model.joblib
+│   ├── churn_threshold.joblib
+│   ├── pipeline_metadata.json
+│   └── tuned_model_comparison.csv
+├── notebooks/                      # End-to-end Jupyter notebooks
+│   ├── 01_data_understanding.ipynb
+│   ├── 02_preprocessing.ipynb
+│   ├── 03_model_training.ipynb
+│   ├── 04_model_tuning.ipynb
+│   └── 05_model_evaluation.ipynb
+├── requirements.txt                # Pinned dependencies
+├── .gitignore
+├── LICENSE
+└── README.md
 
 🚀 16. Installation
 Clone the repository:
 
 Bash
-git clone [https://github.com/your-username/ecommerce-customer-churn.git](https://github.com/your-username/ecommerce-customer-churn.git)
-cd ecommerce-customer-churn
+git clone [https://github.com/Hatimmz25/E-Commerce-Customer-Churn-Analytics-Risk-Assessment-Dashboard.git](https://github.com/Hatimmz25/E-Commerce-Customer-Churn-Analytics-Risk-Assessment-Dashboard.git)
+cd E-Commerce-Customer-Churn-Analytics-Risk-Assessment-Dashboard
 Create and activate a virtual environment:
 
 Bash
